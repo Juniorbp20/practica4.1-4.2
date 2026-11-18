@@ -248,6 +248,80 @@ function norm(s,isSet){
   return s;
 }
 
+
+/* ---------- Preguntas generadas al azar ---------- */
+function ri(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function K(a,b){return a+","+b;}
+function fmt(R){return "{"+R.slice().sort((x,y)=>x[0]-y[0]||x[1]-y[1]).map(p=>"("+p[0]+","+p[1]+")").join(", ")+"}";}
+function setHas(R,a,b){return R.some(p=>p[0]===a&&p[1]===b);}
+function propsRel(R,U){
+  const r={};
+  let f=null;for(const x of U){if(!setHas(R,x,x)){f=x;break;}}
+  r.refl={ok:f===null,why:f===null?"Están todos los pares (x, x).":"Falta el par ("+f+","+f+")."};
+  let s=null;for(const p of R){if(!setHas(R,p[1],p[0])){s=p;break;}}
+  r.sym={ok:s===null,why:s===null?"Cada par trae su inverso.":"Está ("+s[0]+","+s[1]+") pero no ("+s[1]+","+s[0]+")."};
+  let a=null;for(const p of R){if(p[0]!==p[1]&&setHas(R,p[1],p[0])){a=p;break;}}
+  r.anti={ok:a===null,why:a===null?"No hay pares (a,b) y (b,a) con a ≠ b.":"Están ("+a[0]+","+a[1]+") y ("+a[1]+","+a[0]+") con "+a[0]+" ≠ "+a[1]+"."};
+  let t=null;for(const p of R){for(const q of R){if(p[1]===q[0]&&!setHas(R,p[0],q[1])){t=[p,q];break;}}if(t)break;}
+  r.trans={ok:t===null,why:t===null?"Toda cadena (a,b), (b,c) cierra con (a,c).":"("+t[0][0]+","+t[0][1]+") y ("+t[1][0]+","+t[1][1]+") exigen ("+t[0][0]+","+t[1][1]+"), que no está."};
+  return r;
+}
+function closure(R){
+  let C=R.map(p=>[p[0],p[1]]),ch=true;
+  while(ch){ch=false;for(const p of C.slice())for(const q of C.slice()){if(p[1]===q[0]&&!setHas(C,p[0],q[1])){C.push([p[0],q[1]]);ch=true;}}}
+  return C;
+}
+function randRel(U,k){
+  const all=[];U.forEach(a=>U.forEach(b=>all.push([a,b])));
+  return shuffle(all).slice(0,k);
+}
+const NP={refl:"reflexiva",sym:"simétrica",anti:"antisimétrica",trans:"transitiva"};
+const TPL=[
+ {p:"4.1",d:1,t:"fill",gen(){const a=ri(2,9),b=ri(2,9);return {t:"fill",d:1,p:"4.1",q:"Si |A| = "+a+" y |B| = "+b+", ¿cuántos elementos tiene A × B? (escriba un número)",a:[String(a*b)],e:"|A × B| = |A|·|B| = "+a+"·"+b+" = "+(a*b)+"."};}},
+ {p:"4.1",d:1,t:"fill",gen(){const a=ri(2,5),b=ri(2,5),c=ri(2,5);return {t:"fill",d:1,p:"4.1",q:"Si |A| = "+a+", |B| = "+b+" y |C| = "+c+", ¿cuántos elementos tiene A × B × C? (escriba un número)",a:[String(a*b*c)],e:"|A × B × C| = "+a+"·"+b+"·"+c+" = "+(a*b*c)+"."};}},
+ {p:"4.1",d:1,t:"tf",gen(){const a=ri(2,8),b=ri(2,8);const ver=Math.random()<.5;const val=ver?a*b:a+b;return {t:"tf",d:1,p:"4.1",q:"Si |A| = "+a+" y |B| = "+b+", entonces |A × B| = "+val+".",a:ver,e:"El cardinal del producto es |A|·|B| = "+(a*b)+", no "+(a+b)+"."+(ver?" El enunciado es verdadero.":" El enunciado es falso.")};}},
+ {p:"4.1",d:2,t:"fill",gen(){
+   let R=[];while(R.length<4){const p=[ri(1,6),ri(1,6)];if(!setHas(R,p[0],p[1]))R.push(p);}
+   const dom=Math.random()<.5;const v=[...new Set(R.map(p=>p[dom?0:1]))].sort((x,y)=>x-y);
+   return {t:"fill",d:2,p:"4.1",set:true,q:"R = "+fmt(R)+". ¿Cuál es "+(dom?"el dominio":"la imagen")+" de R? (separe con comas, sin repetir)",a:[v.join(",")],e:(dom?"El dominio reúne las primeras componentes: ":"La imagen reúne las segundas componentes: ")+"{"+v.join(", ")+"}."};}},
+ {p:"4.1",d:2,t:"tf",gen(){
+   const U=[1,2,3],R=randRel(U,ri(3,5)),k=pick(["refl","sym","anti","trans"]),pr=propsRel(R,U)[k];
+   return {t:"tf",d:2,p:"4.1",q:"R = "+fmt(R)+" sobre A = {1, 2, 3}. ¿R es "+NP[k]+"?",a:pr.ok,e:(pr.ok?"Sí es "+NP[k]+". ":"No es "+NP[k]+". ")+pr.why};}},
+ {p:"4.1",d:3,t:"fill",gen(){
+   let R,C,add;let g=0;
+   do{R=[];while(R.length<3){const a=ri(1,4),b=ri(1,4);if(a!==b&&!setHas(R,a,b))R.push([a,b]);}C=closure(R);add=C.filter(p=>!setHas(R,p[0],p[1]));g++;}while((add.length<1||add.length>5)&&g<50);
+   return {t:"fill",d:3,p:"4.1",q:"M = {1, 2, 3, 4} y R = "+fmt(R)+". ¿Cuántos pares hay que agregar como mínimo para que R sea transitiva? (escriba un número)",a:[String(add.length)],e:"Se agregan "+fmt(add)+": son "+add.length+" pares, y con ellos ya no queda ninguna cadena sin cerrar."};}},
+ {p:"4.2",d:1,t:"fill",gen(){
+   const n=ri(2,3),sz=[];for(let i=0;i<n;i++)sz.push(ri(1,4));
+   const tot=sz.reduce((s,x)=>s+x*x,0);
+   return {t:"fill",d:1,p:"4.2",q:"Una partición de un conjunto tiene bloques de "+sz.join(", ")+" elementos. ¿Cuántos pares tiene la relación de equivalencia que define? (escriba un número)",a:[String(tot)],e:"Cada bloque de k elementos aporta k² pares: "+sz.map(x=>x+"²").join(" + ")+" = "+sz.map(x=>x*x).join(" + ")+" = "+tot+"."};}},
+ {p:"4.2",d:2,t:"fill",gen(){
+   const k=ri(2,7);
+   return {t:"fill",d:2,p:"4.2",q:"En N, (n, m) ∈ R si n − m es múltiplo de "+k+". ¿Cuántas clases de equivalencia distintas tiene? (escriba un número)",a:[String(k)],e:"n y m están relacionados cuando dejan el mismo residuo al dividir entre "+k+". Los residuos posibles son 0, 1, …, "+(k-1)+": "+k+" clases."};}},
+ {p:"4.2",d:2,t:"tf",gen(){
+   const U=[1,2,3,4];let R=[];
+   const lab={};U.forEach(x=>lab[x]=ri(1,3));
+   U.forEach(a=>U.forEach(b=>{if(lab[a]===lab[b])R.push([a,b]);}));
+   if(Math.random()<.5){R.splice(ri(0,R.length-1),1);}
+   const pr=propsRel(R,U);const ok=pr.refl.ok&&pr.sym.ok&&pr.trans.ok;
+   const bad=!pr.refl.ok?pr.refl:!pr.sym.ok?pr.sym:pr.trans;
+   return {t:"tf",d:2,p:"4.2",q:"R = "+fmt(R)+" sobre A = {1, 2, 3, 4}. ¿R es una relación de equivalencia?",a:ok,e:ok?"Es reflexiva, simétrica y transitiva.":"No lo es. "+bad.why};}},
+ {p:"4.2",d:3,t:"tf",gen(){
+   const U=[1,2,3];let R=U.map(x=>[x,x]);
+   const extra=shuffle([[1,2],[2,1],[1,3],[3,1],[2,3],[3,2]]).slice(0,ri(1,3));extra.forEach(p=>R.push(p));
+   if(Math.random()<.5)R=closure(R);
+   const pr=propsRel(R,U);const ok=pr.refl.ok&&pr.anti.ok&&pr.trans.ok;
+   const bad=!pr.anti.ok?pr.anti:pr.trans;
+   return {t:"tf",d:3,p:"4.2",q:"R = "+fmt(R)+" sobre A = {1, 2, 3}. ¿R es una relación de orden parcial?",a:ok,e:ok?"Es reflexiva, antisimétrica y transitiva.":"No lo es. "+bad.why};}}
+];
+const GENS=[];TPL.forEach(t=>{for(let i=0;i<3;i++)GENS.push({p:t.p,d:t.d,t:t.t,gen:t.gen});});
+function materializar(q,usados){
+  if(!q.gen){usados.add(q.q);return q;}
+  let x,g=0;do{x=q.gen();g++;}while(usados.has(x.q)&&g<30);
+  usados.add(x.q);return x;
+}
+
 /* ---------- Configuración ---------- */
 function chips(cont,items,isActive,onClick){
   cont.innerHTML="";
@@ -259,7 +333,7 @@ function chips(cont,items,isActive,onClick){
   });
 }
 function pool(){
-  return BANK.filter(q=>selPract.has(q.p)&&selTipo.has(q.t)&&(selDif==="mix"||q.d===selDif));
+  return BANK.concat(GENS).filter(q=>selPract.has(q.p)&&selTipo.has(q.t)&&(selDif==="mix"||q.d===selDif));
 }
 function render(){
   chips($("#chipPractica"),[["4.1","Práctica 4.1"],["4.2","Práctica 4.2"]],v=>selPract.has(v),v=>{selPract.has(v)?selPract.delete(v):selPract.add(v);});
@@ -271,7 +345,7 @@ function render(){
   let val=parseInt(c.value,10)||1;
   if(val>n)val=n; if(val<1)val=Math.min(1,n)||1;
   r.value=c.value=val;
-  $("#disp").textContent=n?("Hay "+n+" preguntas disponibles con esta selección."):"No hay preguntas con esta selección. Active al menos una práctica, un tipo y una dificultad.";
+  $("#disp").textContent=n?("Hay "+n+" preguntas disponibles con esta selección (algunas se generan con números al azar en cada intento)."):"No hay preguntas con esta selección. Active al menos una práctica, un tipo y una dificultad.";
   $("#btnIniciar").disabled=n===0;
 }
 $("#rango").oninput=e=>{$("#cant").value=e.target.value;};
@@ -309,7 +383,8 @@ function etiquetaSeleccion(){
 }
 $("#btnIniciar").onclick=()=>{
   const n=parseInt($("#cant").value,10)||1;
-  const lista=shuffle(pool()).slice(0,n);
+  const usados=new Set();
+  const lista=shuffle(pool()).slice(0,n).map(q=>materializar(q,usados));
   iniciar(lista,etiquetaSeleccion());
 };
 
